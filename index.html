@@ -678,7 +678,7 @@
 </style>
 <script>
 // Cargador robusto del SDK de Supabase: prueba múltiples CDNs hasta que una funcione.
-// Esto evita problemas con bloqueadores de contenido o CDNs específicas que fallan.
+// IMPORTANTE: solo intenta la siguiente CDN si la anterior FALLA realmente.
 (function() {
   const CDNS = [
     'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2',
@@ -687,6 +687,11 @@
   ];
   let idx = 0;
   function intentar() {
+    // Si ya cargó (window.supabase existe), no intentamos más.
+    if (window.supabase) {
+      console.log('[SDK] Ya disponible, no se intentan más CDNs');
+      return;
+    }
     if (idx >= CDNS.length) {
       console.error('[SDK] No se pudo cargar Supabase desde ninguna CDN');
       window.__supabaseError = 'No se pudo cargar el SDK desde ninguna CDN. Verifica tu internet y desactiva bloqueadores de anuncios.';
@@ -696,8 +701,15 @@
     console.log('[SDK] Intentando cargar:', url);
     const s = document.createElement('script');
     s.src = url;
-    s.onload = () => console.log('[SDK] Cargado desde:', url);
-    s.onerror = () => { console.warn('[SDK] Falló:', url); intentar(); };
+    s.onload = function() {
+      console.log('[SDK] Script cargado desde:', url);
+      // No invocar intentar() de nuevo aquí — el script ya cargó.
+    };
+    s.onerror = function() {
+      console.warn('[SDK] Falló la carga de:', url);
+      // Solo intentar la siguiente si window.supabase NO existe
+      if (!window.supabase) intentar();
+    };
     document.head.appendChild(s);
   }
   intentar();
